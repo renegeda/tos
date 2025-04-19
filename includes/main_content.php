@@ -125,19 +125,19 @@ require_once 'functions.php';
                     <section class="mt-4">
                         <h2 class="section-title text-center border-bottom mb-4">Список заказов</h2>
                         <div class="table-responsive">
-                            <table class="table table-striped table-hover" id="orders-table">
-                                <thead class="table-light">
+                            <table class="table" id="orders-table">
+                                <thead class="table-light position-sticky">
                                     <tr>
-                                        <th scope="col" data-type="string">ID</th>
-                                        <th scope="col" data-type="string">Имя</th>
-                                        <th scope="col" data-type="string">Фамилия</th>
-                                        <th scope="col" data-type="string">Направление</th>
-                                        <th scope="col" data-type="date">Убытие</th>
-                                        <th scope="col" data-type="date">Прибытие</th>
-                                        <th scope="col" data-type="number">Кол-во человек</th>
-                                        <th scope="col" data-type="number">Цена тура</th>
-                                        <th scope="col" data-type="number">Итого</th>
-                                        <th scope="col" data-type="string">Статус</th>
+                                        <th scope="col" data-type="string" data-sort="id">ID</th>
+                                        <th scope="col" data-type="string" data-sort="first_name">Имя</th>
+                                        <th scope="col" data-type="string" data-sort="last_name">Фамилия</th>
+                                        <th scope="col" data-type="string" data-sort="destination">Направление</th>
+                                        <th scope="col" data-type="date" data-sort="departure_date">Убытие</th>
+                                        <th scope="col" data-type="date" data-sort="arrival_date">Прибытие</th>
+                                        <th scope="col" data-type="number" data-sort="persons">Кол-во человек</th>
+                                        <th scope="col" data-type="number" data-sort="price">Цена тура</th>
+                                        <th scope="col" data-type="number" data-sort="total">Итого</th>
+                                        <th scope="col" data-type="string" data-sort="status">Статус</th>
                                         <th class="action-column"></th>
                                         <th class="action-column"></th>
                                     </tr>
