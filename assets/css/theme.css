@@ -56,6 +56,7 @@ body {
     font-weight: 400;
     line-height: 1rem;
     background: #f2f8fb;
+    scroll-behavior: smooth;
 }
 
 .h1,.h2,.h3,h1,h2,h3 {
@@ -2497,7 +2498,9 @@ progress {
     border-color: var(--gk-table-border-color);
     margin-bottom: 1rem;
     vertical-align: top;
-    width: 100%
+    width: 100%;
+    font-size: 0.85rem;
+    text-align: center;
 }
 
 .table>:not(caption)>*>* {
@@ -2655,7 +2658,9 @@ progress {
     --gk-table-active-bg: #000;
     --gk-table-active-color: #fff;
     --gk-table-hover-bg: #000;
-    --gk-table-hover-color: #fff
+    --gk-table-hover-color: #fff;
+    font-size: .85rem;
+    text-align: center;
 }
 
 .table-dark,.table-light {
@@ -9346,7 +9351,8 @@ textarea.form-control-lg {
 }
 
 .position-sticky {
-    position: sticky!important
+    position: -webkit-sticky!important;
+    position: sticky !important;
 }
 
 .top-0 {
@@ -29054,6 +29060,32 @@ a.fc-event,a.fc-event:hover {
     line-height: 1.4;
 }
 
+.demo-notification {
+    position: fixed;
+    bottom: 120px;
+    left: 30px;
+    background: #ff6b6b;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 9998;
+    opacity: 0;
+    transform: translateX(-100px);
+    transition: all 0.5s ease;
+    max-width: 300px;
+}
+
+.demo-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.demo-notification-content {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
 @keyframes slideIn {
     from { transform: translateX(-100%); }
     to { transform: translateX(0); }
@@ -29061,4 +29093,19 @@ a.fc-event,a.fc-event:hover {
 
 .purchase-notification.show {
     animation: slideIn 0.5s forwards;
+}
+
+#orders-table th[data-sort] {
+    cursor: pointer;
+    position: relative;
+}
+
+#orders-table th.sorted-asc::after {
+    content: " ↑";
+    font-weight: bold;
+}
+
+#orders-table th.sorted-desc::after {
+    content: " ↓";
+    font-weight: bold;
 }
