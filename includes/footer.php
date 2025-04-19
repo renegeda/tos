@@ -22,7 +22,11 @@
     <div id="purchase-notification" class="purchase-notification">
         <div class="notification-content"></div>
     </div>
-
+    
+    <!-- демо контент -->
+    <div id="demo-notification" class="demo-notification">
+        <div class="demo-notification-content"></div>
+    </div>
 <!-- Скрипты -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= BASE_URL ?>assets/js/script.js"></script>
