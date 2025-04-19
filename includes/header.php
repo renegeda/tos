@@ -10,6 +10,5 @@
 </head>
 <body>
 <header>
-    <!-- Навигация из оригинального файла -->
     <?php include 'navigation.php'; ?>
 </header>
