@@ -11,78 +11,117 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     setupDateValidation();
 
-    // Настройка всех обработчиков событий
+    // Настройка обработчиков событий
     function setupEventListeners() {
         // Форма заказа
-        document.getElementById('order-form').addEventListener('submit', handleFormSubmit);
-        document.getElementById('cancel-btn').addEventListener('click', handleCancelEdit);
+        document.getElementById('order-form')?.addEventListener('submit', handleFormSubmit);
+        document.getElementById('cancel-btn')?.addEventListener('click', handleCancelEdit);
         
         // Поиск
-        document.getElementById('table-search').addEventListener('input', handleSearch);
+        document.getElementById('table-search')?.addEventListener('input', handleSearch);
         
         // Расчет стоимости
-        document.getElementById('persons').addEventListener('input', calculateTotalCost);
-        document.getElementById('tour-price').addEventListener('input', calculateTotalCost);
+        document.getElementById('persons')?.addEventListener('input', calculateTotalCost);
+        document.getElementById('tour-price')?.addEventListener('input', calculateTotalCost);
         
         // Сортировка таблицы
-        document.querySelectorAll('#orders-table th[data-type]').forEach((header, index) => {
+        document.querySelectorAll('#orders-table th[data-sort]').forEach(header => {
             header.addEventListener('click', () => {
-                const type = header.getAttribute('data-type');
-                sortTable(index, type);
+                const column = header.getAttribute('data-sort');
+                toggleSort(column);
+                updateSortIndicators();
+                loadOrders();
             });
         });
+    }
+
+    // Переключение направления сортировки
+    function toggleSort(column) {
+        if (currentSort.column === column) {
+            currentSort.direction = currentSort.direction === 'ASC' ? 'DESC' : 'ASC';
+        } else {
+            currentSort.column = column;
+            currentSort.direction = 'ASC';
+        }
+    }
+
+    // Обновление индикаторов сортировки
+    function updateSortIndicators() {
+        document.querySelectorAll('#orders-table th[data-sort]').forEach(header => {
+            header.classList.remove('sorted-asc', 'sorted-desc');
+            const column = header.getAttribute('data-sort');
+            if (column === currentSort.column) {
+                header.classList.add(`sorted-${currentSort.direction.toLowerCase()}`);
+            }
+        });
+    }
+
+    // Генерация ID заказа
+    async function generateOrderId() {
+        try {
+            const response = await fetch('ajax/generate_order_id.php');
+            if (!response.ok) throw new Error('Ошибка генерации ID');
+            
+            const data = await response.json();
+            const orderIdField = document.getElementById('order-id');
+            if (orderIdField) orderIdField.value = data.id || '1/25-FD';
+        } catch (error) {
+            console.error('Ошибка генерации ID:', error);
+            const orderIdField = document.getElementById('order-id');
+            if (orderIdField) orderIdField.value = `${Math.floor(Math.random() * 1000) + 6}/25-FD`;
+        }
     }
 
     // Загрузка заказов с сервера
     async function loadOrders() {
         try {
-            const search = document.getElementById('table-search').value;
+            showLoader('#orders-table');
+            const search = document.getElementById('table-search')?.value || '';
             const url = new URL('tso/ajax/get_orders.php', window.location.origin);
             
-            if (search) {
-                url.searchParams.append('search', search);
-            }
-            if (currentSort.column) {
-                url.searchParams.append('sort', currentSort.column);
-                url.searchParams.append('dir', currentSort.direction);
-            }
+            if (search) url.searchParams.append('search', search);
+            url.searchParams.append('sort', currentSort.column);
+            url.searchParams.append('dir', currentSort.direction);
     
             const response = await fetch(url);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
-            const orders = await response.json();
-            renderOrdersTable(orders);
+            const result = await response.json();
             
-            // Обновляем сообщение "Нет результатов"
-            const noResults = document.getElementById('no-results');
-            if (noResults) {
-                noResults.style.display = orders.length ? 'none' : 'block';
+            if (!result.success || !Array.isArray(result.data)) {
+                throw new Error('Некорректный формат данных');
             }
+            
+            renderOrdersTable(result.data);
+            toggleNoResults(result.data.length === 0);
+            
         } catch (error) {
             console.error('Ошибка загрузки заказов:', error);
-            const noResults = document.getElementById('no-results');
-            if (noResults) {
-                noResults.style.display = 'block';
-            }
+            showNotification(`Ошибка: ${error.message}`, 'error');
+            toggleNoResults(true);
+        } finally {
+            hideLoader('#orders-table');
         }
     }
 
-    // Отображение заказов в таблице
+// Отображение заказов в таблице
     function renderOrdersTable(orders) {
-        const tbody = document.getElementById('orders-body');
+        const tbody = document.querySelector('#orders-table tbody');
+        if (!tbody) return;
+        
         tbody.innerHTML = '';
 
         orders.forEach(order => {
-            const row = document.createElement('tr');
-            row.dataset.id = order.id;
-            row.innerHTML = `
-                <td>${order.id}</td>
-                <td>${order.first_name}</td>
-                <td>${order.last_name}</td>
-                <td>${order.destination}</td>
+            const tr = document.createElement('tr');
+            tr.dataset.id = order.id;
+            tr.innerHTML = `
+                <td>${order.id || ''}</td>
+                <td>${order.first_name || ''}</td>
+                <td>${order.last_name || ''}</td>
+                <td>${order.destination || ''}</td>
                 <td>${formatDate(order.departure_date)}</td>
                 <td>${formatDate(order.arrival_date)}</td>
-                <td>${order.persons}</td>
+                <td>${order.persons || ''}</td>
                 <td class="price-cell">${formatCurrency(order.price)}</td>
                 <td class="price-cell">${formatCurrency(order.total)}</td>
                 <td><span class="badge ${order.status === 'Оплачено' ? 'paid' : 'pending'}">${order.status}</span></td>
@@ -97,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </td>
             `;
-            tbody.appendChild(row);
+            tbody.appendChild(tr);
         });
 
         // Назначение обработчиков для кнопок
@@ -127,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         try {
-            showLoader();
+            showLoader('#submit-btn');
             const url = isEditMode 
                 ? `ajax/update_order.php?id=${currentEditId}`
                 : 'ajax/add_order.php';
@@ -154,19 +193,11 @@ document.addEventListener('DOMContentLoaded', () => {
             loadOrders();
             resetForm();
 
-            // Показ уведомления о покупке для новых оплаченных заказов
-            if (!isEditMode && formData.status === 'Paid') {
-                showPurchaseNotification(
-                    formData.first_name,
-                    formData.last_name,
-                    formData.destination
-                );
-            }
         } catch (error) {
             console.error('Ошибка сохранения:', error);
             showNotification(`Ошибка: ${error.message}`, 'error');
         } finally {
-            hideLoader();
+            hideLoader('#submit-btn');
         }
     }
 
@@ -191,15 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('persons').value = cells[6].textContent;
         document.getElementById('tour-price').value = parseCurrency(cells[7].textContent);
         document.getElementById('total-cost').value = parseCurrency(cells[8].textContent);
-        document.getElementById('status').value = cells[9].textContent.includes('Оплачено') ? 'Paid' : 'Pending';
+        document.getElementById('status').value = cells[9].querySelector('.badge').textContent.includes('Оплачено') ? 'Paid' : 'Pending';
 
         // Обновление UI
         document.getElementById('form-title').textContent = 'Редактировать заказ';
         document.getElementById('submit-btn').textContent = 'Обновить заказ';
         document.getElementById('cancel-btn').style.display = 'inline-block';
-        
-        // Прокрутка к форме
-        document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
     }
 
     // Удаление заказа
@@ -211,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            showLoader();
+            showLoader('#orders-table');
             const response = await fetch(`ajax/delete_order.php?id=${orderId}`, {
                 method: 'DELETE'
             });
@@ -233,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Ошибка удаления:', error);
             showNotification(`Ошибка: ${error.message}`, 'error');
         } finally {
-            hideLoader();
+            hideLoader('#orders-table');
         }
     }
 
@@ -243,44 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTimeout = setTimeout(() => {
             loadOrders();
         }, 300);
-    }
-
-    // Сортировка таблицы
-    function sortTable(columnIndex, type) {
-        const headers = document.querySelectorAll('#orders-table th');
-        headers.forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
-
-        if (currentSort.column === columnIndex) {
-            currentSort.direction = currentSort.direction === 'ASC' ? 'DESC' : 'ASC';
-        } else {
-            currentSort.column = columnIndex;
-            currentSort.direction = 'ASC';
-        }
-
-        headers[columnIndex].classList.add(
-            currentSort.direction === 'ASC' ? 'sorted-asc' : 'sorted-desc'
-        );
-
-        loadOrders();
-    }
-
-    // Генерация ID заказа
-    async function generateOrderId() {
-        try {
-            const response = await fetch('ajax/generate_order_id.php');
-            
-            if (!response.ok) {
-                throw new Error('Ошибка генерации ID');
-            }
-            
-            const data = await response.json();
-            document.getElementById('order-id').value = data.id || '1/25-FD';
-        } catch (error) {
-            console.error('Ошибка генерации ID:', error);
-            // Резервный вариант
-            const randomId = Math.floor(Math.random() * 1000) + 6;
-            document.getElementById('order-id').value = `${randomId}/25-FD`;
-        }
     }
 
     // Расчет общей стоимости
@@ -301,14 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cancel-btn').style.display = 'none';
         generateOrderId();
         calculateTotalCost();
-        
-        // Сброс ошибок валидации
-        document.querySelectorAll('.error-message').forEach(el => {
-            el.style.display = 'none';
-        });
-        document.querySelectorAll('.error').forEach(el => {
-            el.classList.remove('error');
-        });
     }
 
     // Отмена редактирования
@@ -320,56 +302,35 @@ document.addEventListener('DOMContentLoaded', () => {
     function validateForm() {
         let isValid = true;
         
-        // Валидация имени
-        const firstName = document.getElementById('first-name').value.trim();
+        // Проверка полей формы
         isValid &= validateField('first-name', 
-            /^[А-ЯЁа-яёA-Za-z]{2,30}$/.test(firstName),
+            /^[А-ЯЁа-яёA-Za-z]{2,30}$/.test(document.getElementById('first-name').value.trim()),
             'Имя должно содержать 2-30 букв');
 
-        // Валидация фамилии
-        const lastName = document.getElementById('last-name').value.trim();
         isValid &= validateField('last-name', 
-            /^[А-ЯЁа-яёA-Za-z]{2,30}$/.test(lastName),
+            /^[А-ЯЁа-яёA-Za-z]{2,30}$/.test(document.getElementById('last-name').value.trim()),
             'Фамилия должна содержать 2-30 букв');
 
-        // Валидация направления
-        const destination = document.getElementById('destination').value.trim();
         isValid &= validateField('destination', 
-            destination.length >= 2 && destination.length <= 50,
-            'Направление должно содержать 2-50 символов');
+            document.getElementById('destination').value.trim().length >= 2,
+            'Направление должно содержать минимум 2 символа');
 
-        // Валидация даты вылета
-        const departureDate = document.getElementById('departure-date').value;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
         isValid &= validateField('departure-date', 
-            departureDate && new Date(departureDate) >= today,
-            'Дата вылета должна быть не раньше сегодняшнего дня');
+            document.getElementById('departure-date').value,
+            'Укажите дату вылета');
 
-        // Валидация даты прилета
-        const arrivalDate = document.getElementById('arrival-date').value;
         isValid &= validateField('arrival-date', 
-            arrivalDate && new Date(arrivalDate) > new Date(departureDate),
+            document.getElementById('arrival-date').value && 
+            new Date(document.getElementById('arrival-date').value) > new Date(document.getElementById('departure-date').value),
             'Дата прилета должна быть позже даты вылета');
 
-        // Валидация количества человек
-        const persons = document.getElementById('persons').value;
         isValid &= validateField('persons', 
-            persons >= 1 && persons <= 10,
-            'Количество человек должно быть от 1 до 10');
+            document.getElementById('persons').value >= 1,
+            'Укажите количество человек');
 
-        // Валидация цены тура
-        const price = document.getElementById('tour-price').value;
-        const priceValue = parseCurrency(price);
         isValid &= validateField('tour-price', 
-            priceValue > 0 && /^\d{1,6}([.,]\d{1,2})?$/.test(price),
-            'Цена должна быть положительным числом (макс. 2 знака после запятой)');
-
-        // Валидация статуса
-        const status = document.getElementById('status').value;
-        isValid &= validateField('status', 
-            status === 'Paid' || status === 'Pending',
-            'Пожалуйста, выберите статус');
+            parseCurrency(document.getElementById('tour-price').value) > 0,
+            'Укажите цену тура');
 
         return isValid;
     }
@@ -381,13 +342,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isValid) {
             field.classList.remove('is-invalid');
-            errorElement.style.display = 'none';
+            if (errorElement) errorElement.style.display = 'none';
             return true;
         } else {
             field.classList.add('is-invalid');
-            errorElement.textContent = errorMessage;
-            errorElement.style.display = 'block';
+            if (errorElement) {
+                errorElement.textContent = errorMessage;
+                errorElement.style.display = 'block';
+            }
             return false;
+        }
+    }
+
+    // Показать индикатор загрузки
+    function showLoader(selector) {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.classList.add('loading');
+            element.disabled = true;
+            if (selector === '#submit-btn') {
+                element.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Загрузка...`;
+            }
+        }
+    }
+
+    // Скрыть индикатор загрузки
+    function hideLoader(selector) {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.classList.remove('loading');
+            element.disabled = false;
+            if (selector === '#submit-btn') {
+                element.innerHTML = isEditMode ? 'Обновить заказ' : 'Добавить заказ';
+            }
         }
     }
 
@@ -403,23 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             notification.classList.add('fade');
             setTimeout(() => notification.remove(), 300);
-        }, 100);
-    }
-
-    // Уведомление о покупке
-    function showPurchaseNotification(firstName, lastName, destination) {
-        const notification = document.getElementById('purchase-notification');
-        if (!notification) return;
-        
-        const content = notification.querySelector('.notification-content');
-        if (content) {
-            content.textContent = `${firstName} ${lastName} приобрел тур в ${destination}`;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 5000);
-        }
+        }, 3000);
     }
 
     // Форматирование даты
@@ -474,39 +445,70 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    // Переключение сообщения "Нет результатов"
+    function toggleNoResults(show) {
+        const noResults = document.getElementById('no-results');
+        if (noResults) {
+            noResults.style.display = show ? 'block' : 'none';
+        }
+    }
+
+    // Вспомогательные функции
+    function toggleNoResults(show) {
+        const noResults = document.getElementById('no-results');
+        if (noResults) noResults.style.display = show ? 'block' : 'none';
+    }
+
+    function formatDate(dateString) {
+        return dateString ? new Date(dateString).toLocaleDateString('ru-RU') : '';
+    }
+
+    function formatCurrency(value) {
+        return value ? parseFloat(value).toLocaleString('ru-RU', {minimumFractionDigits: 2}) + ' ₽' : '0 ₽';
+    }
+
+    function calculateTotalCost() {
+        const persons = parseInt(document.getElementById('persons').value) || 0;
+        const price = parseFloat(document.getElementById('tour-price').value) || 0;
+        document.getElementById('total-cost').value = formatCurrency(persons * price);
+    }
+    
+    // Функция для показа демо-уведомлений
+    function showDemoNotification(name, lastName, destination) {
+        const notification = document.getElementById('demo-notification');
+        if (!notification) return;
         
-        arrivalInput.addEventListener('change', function() {
-            if (departureInput.value && this.value) {
-                validateField('arrival-date', 
-                    new Date(this.value) > new Date(departureInput.value),
-                    'Дата прилета должна быть позже даты вылета');
-            }
-        });
+        const content = notification.querySelector('.demo-notification-content');
+        if (!content) return;
+    
+        // Останавливаем предыдущие анимации
+        clearTimeout(notification.hideTimeout);
+        notification.classList.remove('show');
+    
+        // Обновляем текст
+        content.textContent = `${name} ${lastName} только что купил(а) тур в ${destination}`;
+        
+        // Показываем уведомление
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 50);
+        
+        // Скрываем через 7 секунд
+        notification.hideTimeout = setTimeout(() => {
+            notification.classList.remove('show');
+        }, 7000);
     }
-
-    // Показать индикатор загрузки
-    function showLoader() {
-        document.getElementById('submit-btn').disabled = true;
-        document.getElementById('submit-btn').innerHTML = `
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            ${isEditMode ? 'Обновление...' : 'Добавление...'}
-        `;
-    }
-
-    // Скрыть индикатор загрузки
-    function hideLoader() {
-        document.getElementById('submit-btn').disabled = false;
-        document.getElementById('submit-btn').innerHTML = isEditMode ? 'Обновить заказ' : 'Добавить заказ';
-    }
-
-    // Демонстрационные уведомления (можно удалить в продакшене)
+    
+    // Интервал для демо-уведомлений (можно удалить в продакшене)
     setInterval(() => {
         if (Math.random() > 0.7) { // 30% chance
             const destinations = ['Москва', 'Сочи', 'Калининград', 'Казань', 'Санкт-Петербург'];
             const names = ['Иван', 'Петр', 'Анна', 'Мария', 'Алексей'];
             const randomName = names[Math.floor(Math.random() * names.length)];
             const randomDestination = destinations[Math.floor(Math.random() * destinations.length)];
-            showPurchaseNotification(randomName, 'Иванов', randomDestination);
+            showDemoNotification(randomName, 'Иванов', randomDestination);
         }
-    }, 10000);
+    }, 10000); // Каждые 10 секунд
 });
