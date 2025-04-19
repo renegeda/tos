@@ -32,19 +32,19 @@
                           <div class="dropdown-divider"></div>
                           <ul class="list-unstyled">
                             <li>
-                              <a class="dropdown-item" href="../pages/profile-edit.html">
+                              <a class="dropdown-item" href="../pages/profile.html">
                                 <i class="fe fe-user me-2"></i>
                                 Профиль
                               </a>
                             </li>
                             <li>
-                              <a class="dropdown-item" href="../pages/student-subscriptions.html">
+                              <a class="dropdown-item" href="../pages/concluded-agreements.html">
                                 <i class="fe fe-star me-2"></i>
                                 Заключенные договора
                               </a>
                             </li>
                             <li>
-                              <a class="dropdown-item" href="#">
+                              <a class="dropdown-item" href="../pages/profile-edit.html">
                                 <i class="fe fe-settings me-2"></i>
                                 Управлением профиля
                               </a>
@@ -53,7 +53,7 @@
                           <div class="dropdown-divider"></div>
                           <ul class="list-unstyled">
                             <li>
-                              <a class="dropdown-item" href="../index.html">
+                              <a class="dropdown-item" href="#">
                                 <i class="fe fe-power me-2"></i>
                                 Выйти
                               </a>
