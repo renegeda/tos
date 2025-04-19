@@ -4,10 +4,8 @@ ini_set('display_errors', 1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Подключение конфигурации (используйте один из вариантов)
-$configPath = realpath(__DIR__.'/../includes/db.php'); // Относительный путь
-// $configPath = '/home/users/j/j20548365/domains/86c9939bcf3f.hosting.myjino.ru/tso/includes/db.php'; // Абсолютный путь
-
+// Подключение конфигурации
+$configPath = realpath(__DIR__.'/../includes/db.php');
 if (!file_exists($configPath)) {
     http_response_code(500);
     die(json_encode([
@@ -32,7 +30,7 @@ try {
 
     // Получаем параметры
     $search = isset($_GET['search']) ? $conn->real_escape_string(trim($_GET['search'])) : '';
-    $sort = isset($_GET['sort']) ? $conn->real_escape_string($_GET['sort']) : 'id';
+    $sort = isset($_GET['sort']) ? $_GET['sort'] : 'id';
     $dir = isset($_GET['dir']) ? ($_GET['dir'] === 'DESC' ? 'DESC' : 'ASC') : 'ASC';
 
     // Формируем запрос
@@ -59,12 +57,20 @@ try {
             )";
         }
     }
-    
-    // Сортировка
+
+    // Валидация параметров сортировки
     $allowedColumns = ['id', 'first_name', 'last_name', 'destination', 
                      'departure_date', 'arrival_date', 'persons', 'price', 'total', 'status'];
     $sort = in_array($sort, $allowedColumns) ? $sort : 'id';
-    $sql .= " ORDER BY $sort $dir";
+    $dir = in_array(strtoupper($dir), ['ASC', 'DESC']) ? strtoupper($dir) : 'ASC';
+
+    // Особый случай для сортировки по ID
+    if ($sort === 'id') {
+        // Извлекаем числовую часть из ID (формат "123/25-FD")
+        $sql .= " ORDER BY CAST(SUBSTRING_INDEX(id, '/', 1) AS UNSIGNED) $dir";
+    } else {
+        $sql .= " ORDER BY $sort $dir";
+    }
 
     // Выполняем запрос
     $result = $conn->query($sql);
